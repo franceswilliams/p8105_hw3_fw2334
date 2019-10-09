@@ -1,0 +1,73 @@
+---
+title: "p8105_hw3_fw2334"
+author: "Frances Williams"
+date: "10/7/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Problem 1
+```{r}
+library(p8105.datasets)
+data("instacart") 
+```
+
+```{r}
+aisle_df = instacart %>% 
+  group_by(aisle) %>% 
+  summarize(item_count = n()) %>% 
+  arrange(desc(item_count))
+```
+
+There are `r nrow(aisle_df)` aisles. The most items are ordered from `fresh vegetables` and `fresh fruits`.
+
+```{r fig.height = 10}
+aisle_plot = aisle_df %>%
+  filter(item_count >= 10000) %>% 
+  mutate(aisle = fct_reorder(aisle, item_count)) %>% 
+  ggplot(aes(x = aisle, y = item_count)) +
+    geom_bar(stat = "identity") +
+    coord_flip()
+
+aisle_plot
+```
+
+### Table
+```{r}
+aisles_table = instacart %>%
+  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(product_name_count = n()) %>% 
+  mutate(product_rank = min_rank(-product_name_count)) %>% 
+  filter(product_rank <= 3) %>% 
+  mutate(product_info = paste(product_name, product_name_count, sep = ", n = ")) %>% 
+  select(-product_name, -product_name_count) %>% 
+  pivot_wider(
+    names_from = aisle,
+    values_from = product_info)
+
+knitr::kable(aisles_table)
+```
+
+### Pink Lady Apples and Coffee Ice Cream
+```{r}
+apples_icecream_table = instacart %>% 
+  select(product_name, order_dow, order_hour_of_day) %>% 
+  filter(product_name == "Pink Lady Apples" | product_name == "Coffee Ice Cream") %>% 
+  group_by(product_name, order_dow) %>% 
+  mutate(mean_hour = mean(order_hour_of_day)) %>% 
+  select(-order_hour_of_day) %>% 
+  distinct() %>% 
+  pivot_wider(
+    names_from = product_name,
+    values_from = mean_hour)
+
+knitr::kable(apples_icecream_table)
+```
+
+
