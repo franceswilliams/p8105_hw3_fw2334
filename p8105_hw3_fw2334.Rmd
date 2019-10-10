@@ -70,4 +70,50 @@ apples_icecream_table = instacart %>%
 knitr::kable(apples_icecream_table)
 ```
 
+# Problem 2
+```{r}
+data("brfss_smart2010")
+
+brfss_cleaned = brfss_smart2010 %>% 
+  janitor::clean_names() %>%
+  filter(topic == "Overall Health") %>% 
+  mutate(
+    state = locationabbr,
+    response_f = as.factor(response),
+    response_ordered = ordered(response_f, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+  
+```
+
+### States at 7 or more locations
+```{r}
+
+```
+
+
+```{r}
+brfss_excellent = brfss_cleaned %>% 
+  filter(response == "Excellent") %>% 
+  select(year, state, data_value) %>% 
+  group_by(year, state) %>% 
+  summarize(mean_value = mean(data_value, na.rm = TRUE)) %>%
+  ggplot(aes(x = year, y = mean_value, group = state, color = state)) +
+    geom_line()
+
+brfss_excellent
+```
+
+```{r}
+brfss_ny = brfss_cleaned %>% 
+  filter(
+    state == "NY",
+    year == "2006" | year == "2010") %>% 
+  select(year, state, response_ordered, data_value) %>% 
+  group_by(year, response_ordered) %>% 
+  ggplot(aes(x = response_ordered, y = data_value)) +
+    geom_point() +
+    facet_grid(~year)
+
+brfss_ny
+```
+
 
