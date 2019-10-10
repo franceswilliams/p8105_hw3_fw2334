@@ -116,4 +116,43 @@ brfss_ny = brfss_cleaned %>%
 brfss_ny
 ```
 
+# Problem 3
+
+```{r}
+accel_df = read_csv(file = "./data/accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    day_type = ifelse(day == "Saturday" | day == "Sunday", "weekend", "weekday"),
+    day_f = as.factor(day),
+    day_ordered = ordered(
+      day_f, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")))
+```
+
+This dataset has `r nrow(accel_df)` observations. 
+
+```{r}
+accel_total = accel_df %>% 
+  mutate(total_activity = 
+           select(., activity_1:activity_1440) %>% 
+           rowSums(na.rm = TRUE)) %>% 
+  select(day_ordered, total_activity)  %>% 
+  group_by(day_ordered) %>% 
+  summarize(total_activity = sum(total_activity))
+
+knitr::kable(accel_total)
+```
+
+
+```{r}
+accel_24hr = accel_df %>% 
+  select(day_ordered, activity_1:activity_1440) %>% 
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "minute_in_day",
+    values_to = "activity_time") %>% 
+  ggplot(aes(x = minute_in_day, y = activity_time, group = day_ordered, color = day_ordered)) +
+    geom_point()
+
+accel_24hr
+```
 
