@@ -17,6 +17,7 @@ library(p8105.datasets)
 data("instacart") 
 ```
 
+#### Description of dataset
 The `instacart` dataset includes information regarding online grocery orders in 2017. There are `r nrow(instacart)` observations in the dataset, each row being a product ordered, and there are `r n_distinct(pull(instacart, user_id))` unique users. The dataset has `r ncol(instacart)` variables, including `days_since_prior_order`, `product_name`, `aisle` where the product is from, and `reordered`, which indicates if the user has previously ordered the product. An example: order ID #1 refers to an order of `r instacart %>% filter(order_id == "1") %>% pull(product_name)`. The variable `days_since_prior_order` = 9, indicating that this user last ordered groceries on instacart nine days ago. 
 
 ```{r}
@@ -26,7 +27,8 @@ aisle_df = instacart %>%
   arrange(desc(item_count))
 ```
 
-There are `r nrow(aisle_df)` aisles, and the most items are ordered from `fresh vegetables` and `fresh fruits`.
+There are `r nrow(aisle_df)` aisles, and the most items are ordered from the `fresh vegetables` and `fresh fruits` aisles.
+
 
 ```{r fig.height = 10}
 aisle_plot = aisle_df %>%
@@ -34,18 +36,19 @@ aisle_plot = aisle_df %>%
   mutate(aisle = fct_reorder(aisle, item_count)) %>% 
   ggplot(aes(x = aisle, y = item_count)) +
     geom_bar(stat = "identity", fill = "pink") +
-    coord_flip()
+    coord_flip() +
+    labs(title = "Count of items ordered by aisle (10,000 minimum)")
 
 aisle_plot
 ```
+
 Fruits and vegetables were by far the most ordered products, followed by yogurt. All other products were ordered fewer than 50,000 times. 
 
-### Table
-##### Light brown sugar, 499
-##### 975
+### Table: Three most popular items in baking ingredients, dog food care, and packaged vegetables fruits aisles
+
 ```{r}
 aisles_table = instacart %>%
-  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "packaged vegetables fruits") %>% 
   group_by(aisle, product_name) %>% 
   summarize(product_name_count = n()) %>% 
   mutate(product_rank = rank(-product_name_count)) %>% 
@@ -54,13 +57,16 @@ aisles_table = instacart %>%
   select(-product_name, -product_name_count) %>% 
   pivot_wider(
     names_from = aisle,
-    values_from = product_info)
+    values_from = product_info) %>% 
+  arrange(product_rank)
 
 knitr::kable(aisles_table)
 ```
 
-### Pink Lady Apples and Coffee Ice Cream
-##### 0 is Sunday - assign Sunday to 0
+The top ranking products in the `baking ingredients`, `dog food care`, and `packaged vegetable fruits` aisles were Light Brown Sugar (n = 499), Snack Sticks Chicken & Rice Recip Dog Treats (n = 30), and Organic Baby Spinach (n = 9784), respectively. 
+
+### Table: Pink Lady Apples and Coffee Ice Cream: mean time of day ordered
+
 
 ```{r}
 apples_icecream_table = instacart %>% 
@@ -84,13 +90,9 @@ apples_icecream_table = instacart %>%
     coffee_ice_cream = paste(icecream_hr, ice_cream_minute, sep = ":")) %>% 
   select(order_day, pink_lady_apples, coffee_ice_cream)
 
-
-```
-
-### Table 1: Mean time of day
-```{r}
 knitr::kable(apples_icecream_table)
 ```
+
 
 Coffee ice cream was on average ordered later in the day than pink lady apples. 
 
@@ -118,7 +120,9 @@ brfss_7locations = brfss_cleaned %>%
   filter((year == "2002" | year == "2010") & location_count >= 7)
 ```
 
-In 2002, the states with 7 or more distinct locations were `r brfss_7locations %>% filter(year == "2002") %>% pull(state)`. In 2010, The states with 7 or more dinstinct locations were `r brfss_7locations %>% filter(year == "2010") %>% pull(state)`.
+#### States observed at 7 or more locations:
+* In 2002, the states with 7 or more distinct locations were `r brfss_7locations %>% filter(year == "2002") %>% pull(state)`. 
+* In 2010, The states with 7 or more dinstinct locations were `r brfss_7locations %>% filter(year == "2010") %>% pull(state)`.
 
 
 ```{r}
@@ -128,7 +132,8 @@ brfss_excellent = brfss_cleaned %>%
   group_by(year, state) %>% 
   summarize(mean_value = mean(data_value, na.rm = TRUE)) %>%
   ggplot(aes(x = year, y = mean_value, group = state, color = state)) +
-    geom_line()
+    geom_line() +
+    labs(title = "Mean data value over time by state")
 
 brfss_excellent
 ```
@@ -141,11 +146,15 @@ brfss_ny = brfss_cleaned %>%
   select(year, state, response_ordered, data_value) %>% 
   group_by(year, response_ordered) %>% 
   ggplot(aes(x = response_ordered, y = data_value)) +
-    geom_bar(stat = "identity") +
-    facet_grid(~year)
+    geom_point() +
+    facet_grid(~year) +
+    labs(title = "Data value distribution across response types for overall health in New York")
 
 brfss_ny
 ```
+
+The distribution of overall health was similar comparing 2006 and 2010 data. One notable difference is that "Very good" responses were more prevalent in 2010 compared to 2006.  
+
 
 # Problem 3
 
@@ -167,8 +176,10 @@ accel_df = read_csv(file = "./data/accel_data.csv") %>%
   
 ```
 
-This dataset has `r nrow(accel_df)` observations and `r ncol(accel_df)` variables.
+#### Description of dataset
+This dataset has `r nrow(accel_df)` observations and `r ncol(accel_df)` variables. Each row of data relates to a minute of the day, and variables include `week`, `day_id` (i.e. day 1, day 2, etc.), `day_ordered` (i.e. Monday, Tuesday, etc.), `day_type` (weekend vs. weekday), and `activity_time` calculated by the accelerometer. 
 
+### Table: Total activity by day
 ```{r}
 accel_total = accel_df %>% 
   group_by(day_id) %>% 
@@ -177,15 +188,19 @@ accel_total = accel_df %>%
 knitr::kable(accel_total)
 ```
 
+Activity seems to go up and then back down over the course of weeks (up for a few days and then back down), but it is difficult to see a clear pattern by looking at this table. 
+
+### Plot: Activity over each 24 hour period
 
 ```{r}
 accel_24hr = accel_df %>% 
   ggplot(aes(x = minute_of_day, y = activity_time, group = day_id, color = day_ordered)) +
     geom_smooth() +
-    labs(title = "Activity by minute") +
+    labs(title = "Activity over the course of each day") +
     scale_x_continuous(breaks = seq(from = 0, to = 1440, by = 100))
 
 accel_24hr
 ```
 
+One clear pattern in the data is that on Sundays, the man is typically more active earlier in the day and not very active towards the end of the day. This is different from other days, when activity is more varied and there tends to be a fair amount of activity towards the end of the 24 hour period. 
 
