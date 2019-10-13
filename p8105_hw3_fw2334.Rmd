@@ -17,6 +17,8 @@ library(p8105.datasets)
 data("instacart") 
 ```
 
+The `instacart` dataset includes information regarding online grocery orders in 2017. There are `r nrow(instacart)` observations in the dataset, each row being a product ordered, and there are `r n_distinct(pull(instacart, user_id))` unique users. The dataset has `r ncol(instacart)` variables, including `days_since_prior_order`, `product_name`, `aisle` where the product is from, and `reordered`, which indicates if the user has previously ordered the product. An example: order ID #1 refers to an order of `r instacart %>% filter(order_id == "1") %>% pull(product_name)`. The variable `days_since_prior_order` = 9, indicating that this user last ordered groceries on instacart nine days ago. 
+
 ```{r}
 aisle_df = instacart %>% 
   group_by(aisle) %>% 
@@ -24,19 +26,19 @@ aisle_df = instacart %>%
   arrange(desc(item_count))
 ```
 
-There are `r nrow(aisle_df)` aisles. The most items are ordered from `fresh vegetables` and `fresh fruits`.
+There are `r nrow(aisle_df)` aisles, and the most items are ordered from `fresh vegetables` and `fresh fruits`.
 
 ```{r fig.height = 10}
 aisle_plot = aisle_df %>%
   filter(item_count >= 10000) %>% 
   mutate(aisle = fct_reorder(aisle, item_count)) %>% 
   ggplot(aes(x = aisle, y = item_count)) +
-    geom_bar(stat = "identity") +
+    geom_bar(stat = "identity", fill = "pink") +
     coord_flip()
 
 aisle_plot
 ```
-
+Fruits and vegetables were by far the most ordered products, followed by yogurt. All other products were ordered fewer than 50,000 times. 
 
 ### Table
 ##### Light brown sugar, 499
@@ -58,22 +60,40 @@ knitr::kable(aisles_table)
 ```
 
 ### Pink Lady Apples and Coffee Ice Cream
-##### 0 is Sunday - say "I'm assigning Sunday to 0"
-##### convert times to hour of day
+##### 0 is Sunday - assign Sunday to 0
+
 ```{r}
 apples_icecream_table = instacart %>% 
   select(product_name, order_dow, order_hour_of_day) %>% 
   filter(product_name == "Pink Lady Apples" | product_name == "Coffee Ice Cream") %>% 
-  group_by(product_name, order_dow) %>% 
+  mutate(order_day = as.numeric(order_dow)) %>% 
+  group_by(product_name, order_day) %>% 
   mutate(mean_hour = mean(order_hour_of_day)) %>% 
-  select(-order_hour_of_day) %>% 
+  select(-order_hour_of_day, -order_dow) %>% 
   distinct() %>% 
   pivot_wider(
     names_from = product_name,
-    values_from = mean_hour)
+    values_from = mean_hour) %>% 
+  arrange(order_day) %>% 
+  separate("Pink Lady Apples", c("apples_hr", "apples_min"), 2) %>% 
+  separate("Coffee Ice Cream", c("icecream_hr", "icecream_min"), 2) %>% 
+  mutate(
+    apples_minute = round(as.numeric(apples_min)*60),
+    ice_cream_minute = round(as.numeric(icecream_min)*60),
+    pink_lady_apples = paste(apples_hr, apples_minute, sep = ":"),
+    coffee_ice_cream = paste(icecream_hr, ice_cream_minute, sep = ":")) %>% 
+  select(order_day, pink_lady_apples, coffee_ice_cream)
 
+
+```
+
+### Table 1: Mean time of day
+```{r}
 knitr::kable(apples_icecream_table)
 ```
+
+Coffee ice cream was on average ordered later in the day than pink lady apples. 
+
 
 # Problem 2
 ```{r}
@@ -98,7 +118,7 @@ brfss_7locations = brfss_cleaned %>%
   filter((year == "2002" | year == "2010") & location_count >= 7)
 ```
 
-In 2002, the states with 7 or more distinct locations were `r brfss_7locations %>% filter(year == "2002") %>% pull(state)`. in 2010, `r brfss_7locations %>% filter(year == "2010") %>% pull(state)`.
+In 2002, the states with 7 or more distinct locations were `r brfss_7locations %>% filter(year == "2002") %>% pull(state)`. In 2010, The states with 7 or more dinstinct locations were `r brfss_7locations %>% filter(year == "2010") %>% pull(state)`.
 
 
 ```{r}
@@ -121,7 +141,7 @@ brfss_ny = brfss_cleaned %>%
   select(year, state, response_ordered, data_value) %>% 
   group_by(year, response_ordered) %>% 
   ggplot(aes(x = response_ordered, y = data_value)) +
-    geom_point() +
+    geom_bar(stat = "identity") +
     facet_grid(~year)
 
 brfss_ny
@@ -143,11 +163,11 @@ accel_df = read_csv(file = "./data/accel_data.csv") %>%
       day_f, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
     minute = substr(minute, 10, nchar(minute)),
     minute_of_day = as.numeric(minute)) %>%
-  select(-day_f, -day, minute)
+  select(-day_f, -day, -minute)
   
 ```
 
-This dataset has `r nrow(accel_df)` observations. Do pivot longer 50400 observations and 6 variables.
+This dataset has `r nrow(accel_df)` observations and `r ncol(accel_df)` variables.
 
 ```{r}
 accel_total = accel_df %>% 
