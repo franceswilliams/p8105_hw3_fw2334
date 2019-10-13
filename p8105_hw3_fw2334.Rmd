@@ -37,13 +37,16 @@ aisle_plot = aisle_df %>%
 aisle_plot
 ```
 
+
 ### Table
+##### Light brown sugar, 499
+##### 975
 ```{r}
 aisles_table = instacart %>%
   filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
   summarize(product_name_count = n()) %>% 
-  mutate(product_rank = min_rank(-product_name_count)) %>% 
+  mutate(product_rank = rank(-product_name_count)) %>% 
   filter(product_rank <= 3) %>% 
   mutate(product_info = paste(product_name, product_name_count, sep = ", n = ")) %>% 
   select(-product_name, -product_name_count) %>% 
@@ -55,6 +58,8 @@ knitr::kable(aisles_table)
 ```
 
 ### Pink Lady Apples and Coffee Ice Cream
+##### 0 is Sunday - say "I'm assigning Sunday to 0"
+##### convert times to hour of day
 ```{r}
 apples_icecream_table = instacart %>% 
   select(product_name, order_dow, order_hour_of_day) %>% 
@@ -78,16 +83,22 @@ brfss_cleaned = brfss_smart2010 %>%
   janitor::clean_names() %>%
   filter(topic == "Overall Health") %>% 
   mutate(
-    state = locationabbr,
     response_f = as.factor(response),
-    response_ordered = ordered(response_f, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+    response_ordered = ordered(response_f, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))) %>% 
+  separate(locationdesc, c("state", "county"), " - ") %>% 
+  select(-locationabbr, -response_f)
   
 ```
 
-### States at 7 or more locations
-```{r}
 
+```{r}
+brfss_7locations = brfss_cleaned %>% 
+  group_by(year, state) %>% 
+  summarize(location_count = n_distinct(county)) %>% 
+  filter((year == "2002" | year == "2010") & location_count >= 7)
 ```
+
+In 2002, the states with 7 or more distinct locations were `r brfss_7locations %>% filter(year == "2002") %>% pull(state)`. in 2010, `r brfss_7locations %>% filter(year == "2010") %>% pull(state)`.
 
 
 ```{r}
@@ -121,23 +132,27 @@ brfss_ny
 ```{r}
 accel_df = read_csv(file = "./data/accel_data.csv") %>% 
   janitor::clean_names() %>% 
+   pivot_longer(
+    activity_1:activity_1440,
+    names_to = "minute",
+    values_to = "activity_time") %>% 
   mutate(
     day_type = ifelse(day == "Saturday" | day == "Sunday", "weekend", "weekday"),
     day_f = as.factor(day),
     day_ordered = ordered(
-      day_f, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")))
+      day_f, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    minute = substr(minute, 10, nchar(minute)),
+    minute_of_day = as.numeric(minute)) %>%
+  select(-day_f, -day, minute)
+  
 ```
 
-This dataset has `r nrow(accel_df)` observations. 
+This dataset has `r nrow(accel_df)` observations. Do pivot longer 50400 observations and 6 variables.
 
 ```{r}
 accel_total = accel_df %>% 
-  mutate(total_activity = 
-           select(., activity_1:activity_1440) %>% 
-           rowSums(na.rm = TRUE)) %>% 
-  select(day_ordered, total_activity)  %>% 
-  group_by(day_ordered) %>% 
-  summarize(total_activity = sum(total_activity))
+  group_by(day_id) %>% 
+  summarize(total_activity = sum(activity_time, na.rm = TRUE))
 
 knitr::kable(accel_total)
 ```
@@ -145,14 +160,12 @@ knitr::kable(accel_total)
 
 ```{r}
 accel_24hr = accel_df %>% 
-  select(day_ordered, activity_1:activity_1440) %>% 
-  pivot_longer(
-    activity_1:activity_1440,
-    names_to = "minute_in_day",
-    values_to = "activity_time") %>% 
-  ggplot(aes(x = minute_in_day, y = activity_time, group = day_ordered, color = day_ordered)) +
-    geom_point()
+  ggplot(aes(x = minute_of_day, y = activity_time, group = day_id, color = day_ordered)) +
+    geom_smooth() +
+    labs(title = "Activity by minute") +
+    scale_x_continuous(breaks = seq(from = 0, to = 1440, by = 100))
 
 accel_24hr
 ```
+
 
